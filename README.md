@@ -1,160 +1,144 @@
 # 🦤 Pelican Panel — Guide d'installation complet sur Debian (Docker)
 
-> Guide complet pour déployer **Pelican Panel** avec Docker, Portainer et MariaDB sur une machine Debian.
+> Guide d'installation pas à pas pour déployer **Pelican Panel** avec Docker et MariaDB sur une machine Debian.  
 > Conçu pour les débutants — chaque commande est expliquée.
 
 ---
 
-## 📖 Table des matières
+## 📚 Table des matières
 
-1. [Comprendre Docker et les concepts clés](#-comprendre-docker-et-les-concepts-clés)
+1. [Comprendre Docker et Docker Compose](#-comprendre-docker-et-docker-compose)
 2. [Prérequis](#-prérequis)
 3. [Étape 1 — Installation de Docker](#étape-1--installation-de-docker)
-4. [Étape 2 — Installation de Portainer](#étape-2--installation-de-portainer)
-5. [Étape 3 — Organisation des services](#étape-3--organisation-des-services)
-6. [Étape 4 — Déploiement de Pelican Panel](#étape-4--déploiement-de-pelican-panel)
-7. [Étape 5 — Récupération de la clé d'application](#étape-5--récupération-de-la-clé-dapplication-)
+4. [Étape 2 — Organiser ses services Docker](#étape-2--organiser-ses-services-docker)
+5. [Étape 3 — Configurer Pelican Panel](#étape-3--configurer-pelican-panel)
+6. [Étape 4 — Lancer l'environnement](#étape-4--lancer-lenvironnement)
+7. [Étape 5 — Sauvegarder la clé d'application](#étape-5--sauvegarder-la-clé-dapplication-)
 8. [Étape 6 — Finalisation via l'interface Web](#étape-6--finalisation-via-linterface-web)
-9. [Gérer plusieurs services avec Portainer](#-gérer-plusieurs-services-avec-portainer)
+9. [Gérer plusieurs services Docker Compose](#-gérer-plusieurs-services-docker-compose)
 10. [Commandes utiles](#️-commandes-utiles)
-11. [Dépannage](#-dépannage)
+11. [Résolution des problèmes courants](#-résolution-des-problèmes-courants)
 
 ---
 
-## 🧠 Comprendre Docker et les concepts clés
+## 🧠 Comprendre Docker et Docker Compose
 
-Avant de commencer, voici les notions essentielles à connaître :
+Avant de commencer, voici quelques notions clés :
 
 | Terme | Explication simple |
 |---|---|
-| **Docker** | Un outil qui permet de faire tourner des applications dans des "boîtes" isolées appelées conteneurs |
+| **Docker** | Un outil qui permet de faire tourner des applications dans des "boîtes" isolées appelées **conteneurs** |
 | **Conteneur** | Une boîte autonome qui contient une application et tout ce dont elle a besoin pour fonctionner |
-| **Image** | Le modèle à partir duquel un conteneur est créé (comme un moule) |
-| **Docker Compose** | Un outil pour décrire et lancer plusieurs conteneurs ensemble via un fichier `compose.yml` |
-| **Stack** | Un ensemble de conteneurs définis dans un même fichier `compose.yml` et déployés ensemble |
-| **Volume** | Un espace de stockage persistant pour les données d'un conteneur (les données survivent aux redémarrages) |
-| **Réseau** | Un réseau virtuel interne qui permet aux conteneurs de communiquer entre eux |
-| **Portainer** | Une interface web pour gérer Docker visuellement, sans avoir à taper des commandes |
+| **Image** | Le "modèle" à partir duquel un conteneur est créé (ex: l'image `mariadb` contient MariaDB prêt à l'emploi) |
+| **Docker Compose** | Un outil pour décrire et lancer plusieurs conteneurs ensemble via un simple fichier texte (`compose.yml`) |
+| **Volume** | Un espace de stockage persistant : même si le conteneur est supprimé, les données restent |
+| **Stack** | Un ensemble de conteneurs définis dans un même fichier `compose.yml` |
+| **Port** | Une "porte d'entrée" réseau. `80:80` signifie : le port 80 de la machine → port 80 du conteneur |
 
-> 💡 **En résumé :** Docker permet de faire tourner des services (comme Pelican, une base de données, etc.) de façon isolée et propre sur votre machine, sans risquer de casser le système.
+> 💡 **En résumé :** Docker Compose lit votre fichier `compose.yml`, télécharge les images nécessaires, et lance tous vos conteneurs automatiquement.
 
 ---
 
-## 📋 Prérequis
+## ✅ Prérequis
 
 - Une machine sous **Debian** (VM ou serveur physique)
-- Accès **SSH** avec droits `sudo` ou connexion en `root`
-- L'**adresse IP** de votre machine (notée `X.X.X.X` dans ce guide)
-  - Pour la trouver : `ip a | grep inet`
-- Une connexion internet active sur le serveur
+- Accès **SSH** avec droits `sudo` ou `root`
+- L'**adresse IP** de votre VM (notée `X.X.X.X` dans ce guide)
+
+> 💡 Pour trouver votre IP : `ip a` ou `hostname -I`
 
 ---
 
 ## Étape 1 — Installation de Docker
 
-Ces commandes installent Docker et son plugin Compose sur votre système Debian.
+Connectez-vous en SSH à votre machine Debian, puis exécutez les commandes suivantes :
+
+### 1.1 — Mise à jour du système
 
 ```bash
-# 1. Mise à jour de la liste des paquets disponibles
 sudo apt update && sudo apt upgrade -y
-
-# 2. Installation des outils nécessaires pour ajouter le dépôt Docker
 sudo apt install -y ca-certificates curl gnupg lsb-release
+```
 
-# 3. Ajout de la clé GPG officielle de Docker (pour vérifier l'authenticité des paquets)
+> Ces commandes mettent à jour la liste des paquets disponibles et installent des outils de base nécessaires pour la suite.
+
+### 1.2 — Ajout du dépôt officiel Docker
+
+```bash
+# Crée le dossier pour stocker la clé de sécurité de Docker
 sudo install -m 0755 -d /etc/apt/keyrings
+
+# Télécharge et enregistre la clé GPG officielle de Docker
 curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
-# 4. Ajout du dépôt officiel Docker dans les sources APT
+# Ajoute le dépôt Docker à la liste des sources APT
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+```
 
-# 5. Installation de Docker et du plugin Compose
+> Docker n'est pas dans les dépôts Debian par défaut. Ces commandes ajoutent le dépôt officiel de Docker pour pouvoir l'installer.
+
+### 1.3 — Installation de Docker
+
+```bash
 sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 ```
 
-**Vérification :** Après l'installation, testez que Docker fonctionne correctement :
+> - `docker-ce` : le moteur Docker
+> - `docker-ce-cli` : les commandes en ligne (ex: `docker ps`)
+> - `docker-compose-plugin` : permet d'utiliser `docker compose` (avec espace, la version moderne)
+
+### 1.4 — Vérifier l'installation
 
 ```bash
-sudo docker run hello-world
+docker --version
+docker compose version
 ```
 
-> ✅ Si vous voyez un message `Hello from Docker!`, l'installation est réussie.
-
-**Optionnel — Utiliser Docker sans `sudo` :**
-
-```bash
-# Ajoute votre utilisateur au groupe docker (évite de taper sudo à chaque fois)
-sudo usermod -aG docker $USER
-
-# Déconnectez-vous puis reconnectez-vous en SSH pour que le changement prenne effet
+Vous devriez obtenir quelque chose comme :
+```
+Docker version 26.x.x, build ...
+Docker Compose version v2.x.x
 ```
 
 ---
 
-## Étape 2 — Installation de Portainer
+## Étape 2 — Organiser ses services Docker
 
-**Portainer** est une interface web qui vous permet de gérer tous vos conteneurs Docker visuellement : démarrer, arrêter, consulter les logs, déployer de nouvelles stacks... sans jamais taper une commande.
+### Pourquoi organiser ses fichiers ?
 
-```bash
-# 1. Création d'un volume dédié pour les données de Portainer
-sudo docker volume create portainer_data
+Quand on gère plusieurs services (Pelican, Nextcloud, Vaultwarden, etc.), il est important d'avoir une structure claire. Sans organisation, il devient vite difficile de savoir quel fichier correspond à quel service.
 
-# 2. Lancement du conteneur Portainer
-sudo docker run -d \
-  --name portainer \
-  --restart=always \
-  -p 9000:9000 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v portainer_data:/data \
-  portainer/portainer-ce:latest
-```
-
-> 💡 **Explication des options :**
-> - `-p 9000:9000` → rend l'interface accessible sur le port 9000
-> - `-v /var/run/docker.sock:/var/run/docker.sock` → donne à Portainer l'accès à Docker
-> - `--restart=always` → Portainer redémarre automatiquement avec le serveur
-
-**Accès à Portainer :**
-
-Ouvrez votre navigateur et rendez-vous sur :
-```
-http://<IP_DE_VOTRE_VM>:9000
-```
-
-Lors du premier accès, créez un compte administrateur. Choisissez un mot de passe robuste.
-
-> ⚠️ **Important :** Portainer vous demande de créer votre compte dans les premières minutes. Passé ce délai, il se verrouille par sécurité. Si c'est trop tard, redémarrez le conteneur : `sudo docker restart portainer`
-
----
-
-## Étape 3 — Organisation des services
-
-Quand on gère **plusieurs services Docker**, il est essentiel de bien organiser ses fichiers pour ne pas s'y perdre. Voici la structure recommandée :
+### Structure recommandée
 
 ```
 /opt/
-├── portainer/          ← Portainer (déjà déployé via docker run)
-├── pelican/            ← Pelican Panel + sa base de données
+├── pelican/          ← Dossier du service Pelican
 │   └── compose.yml
-├── mon-autre-service/  ← Un autre service futur
+├── nextcloud/        ← Exemple d'un autre service
 │   └── compose.yml
-└── encore-un-autre/    ← Et ainsi de suite...
+├── vaultwarden/      ← Exemple d'un autre service
+│   └── compose.yml
+└── monitoring/       ← Exemple : outils de supervision
     └── compose.yml
 ```
 
-> 💡 **Règle d'or :** Un dossier = un service (ou un groupe de services liés). Cela permet de démarrer, arrêter ou mettre à jour chaque service indépendamment.
+> 💡 **Règle d'or :** 1 dossier = 1 service = 1 fichier `compose.yml`  
+> Cela vous permet de démarrer, arrêter ou modifier un service **sans toucher aux autres**.
 
-Créez le dossier pour Pelican :
+### Créer le dossier pour Pelican
 
 ```bash
-mkdir -p /opt/pelican && cd /opt/pelican
+mkdir -p /opt/pelican
+cd /opt/pelican
 ```
+
+> `mkdir -p` crée le dossier et tous les dossiers parents si nécessaire. `cd` se déplace dans ce dossier.
 
 ---
 
-## Étape 4 — Déploiement de Pelican Panel
+## Étape 3 — Configurer Pelican Panel
 
 Créez le fichier de configuration Docker Compose :
 
@@ -162,270 +146,359 @@ Créez le fichier de configuration Docker Compose :
 nano compose.yml
 ```
 
-Copiez-collez le contenu suivant. **Remplacez chaque occurrence de `X.X.X.X` par l'adresse IP réelle de votre machine**, ainsi que les mots de passe par des valeurs personnalisées :
+> `nano` est un éditeur de texte simple dans le terminal. Si vous préférez, vous pouvez utiliser `vim` ou tout autre éditeur.
+
+Copiez-collez le contenu suivant, puis **remplacez `X.X.X.X` par l'IP réelle de votre VM** (à deux endroits) :
 
 ```yaml
 services:
-
-  # ─────────────────────────────────────────────
-  # Conteneur 1 : Pelican Panel (l'application web)
-  # ─────────────────────────────────────────────
   panel:
     image: ghcr.io/pelican-dev/panel:latest
     restart: always
     networks:
       - default
     ports:
-      - "80:80"       # HTTP
-      - "443:443"     # HTTPS
+      - "80:80"     # Port HTTP — accès web au panel
+      - "443:443"   # Port HTTPS
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - pelican-data:/pelican-data              # Données de config persistantes
-      - pelican-logs:/var/www/html/storage/logs # Logs persistants
+      - pelican-data:/pelican-data               # Données de config du panel
+      - pelican-logs:/var/www/html/storage/logs  # Logs de l'application
     environment:
       XDG_DATA_HOME: /pelican-data
-      APP_URL: "http://X.X.X.X"           # ← IP de votre serveur
+      APP_URL: "http://X.X.X.X"         # ← Remplacer par l'IP de votre serveur
       ADMIN_EMAIL: "votre-email@example.com"
       DB_CONNECTION: mysql
-      DB_HOST: "X.X.X.X"                  # ← IP de votre VM
+      DB_HOST: "X.X.X.X"               # ← Remplacer par l'IP de votre VM
       DB_PORT: 3306
       DB_DATABASE: pelican
       DB_USERNAME: pelican
-      DB_PASSWORD: motDePasseDB            # ← À personnaliser
+      DB_PASSWORD: motDePasseDB         # ← Choisissez un mot de passe fort
     depends_on:
-      - mysql   # Le panel attend que MySQL soit prêt avant de démarrer
+      - mysql   # Le panel ne démarre qu'une fois MySQL prêt
 
-  # ─────────────────────────────────────────────
-  # Conteneur 2 : MariaDB (la base de données)
-  # ─────────────────────────────────────────────
   mysql:
     image: mariadb:10.11
     restart: always
     networks:
       - default
     ports:
-      - "3306:3306"   # Expose MySQL à l'hôte pour la configuration initiale
+      - "3306:3306"   # Port MySQL exposé sur la machine hôte
     environment:
-      MYSQL_ROOT_PASSWORD: motDePasseDBROOT!   # ← À personnaliser (accès root)
-      MYSQL_DATABASE: pelican                   # Nom de la base créée automatiquement
-      MYSQL_USER: pelican                       # Utilisateur dédié à Pelican
-      MYSQL_PASSWORD: motDePasseMYSQL           # ← À personnaliser
+      MYSQL_ROOT_PASSWORD: motDePasseDBROOT!   # ← Mot de passe root (à changer !)
+      MYSQL_DATABASE: pelican
+      MYSQL_USER: pelican
+      MYSQL_PASSWORD: motDePasseMYSQL          # ← Doit correspondre à DB_PASSWORD ci-dessus
     volumes:
       - pelican-db:/var/lib/mysql   # Les données de la BDD survivent aux redémarrages
 
-# Déclaration des volumes (espaces de stockage persistants)
 volumes:
-  pelican-data:
-  pelican-logs:
-  pelican-db:
+  pelican-data:    # Données persistantes du panel
+  pelican-logs:    # Logs persistants
+  pelican-db:      # Base de données persistante
 
-# Déclaration du réseau interne pour que les conteneurs communiquent
 networks:
   default:
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.20.0.0/16   # Réseau interne isolé pour cette stack
 ```
 
-> 💾 Sauvegardez avec `Ctrl+O` → `Entrée` → `Ctrl+X`
+> 💾 Sauvegardez et quittez : `Ctrl+O` → `Entrée` → `Ctrl+X`
 
-Lancez les conteneurs :
+### Comprendre le fichier compose.yml
+
+- **`image`** : l'image Docker à utiliser (téléchargée automatiquement depuis internet)
+- **`restart: always`** : le conteneur redémarre automatiquement si la machine reboot ou si il plante
+- **`ports`** : relie un port de votre machine à un port dans le conteneur (`machine:conteneur`)
+- **`volumes`** : stockage persistant — vos données ne sont pas perdues si le conteneur est recréé
+- **`environment`** : variables de configuration passées à l'application
+- **`depends_on`** : définit l'ordre de démarrage des conteneurs
+- **`networks`** : réseau interne isolé — les conteneurs de cette stack communiquent entre eux mais pas avec les autres stacks
+
+---
+
+## Étape 4 — Lancer l'environnement
+
+Depuis le dossier `/opt/pelican`, lancez :
 
 ```bash
 sudo docker compose up -d
 ```
 
-> ⏳ **Au premier démarrage**, Docker télécharge les images (peut prendre quelques minutes selon votre connexion) et initialise la base de données. Attendez **1 à 2 minutes** avant d'accéder à l'interface web.
+> - `up` : crée et démarre les conteneurs
+> - `-d` : mode "détaché" — les conteneurs tournent en arrière-plan (vous gardez la main dans le terminal)
 
-Vérifiez que les conteneurs tournent bien :
+Docker va télécharger les images puis démarrer les conteneurs. Vous verrez quelque chose comme :
+
+```
+✔ Container pelican-mysql-1    Started
+✔ Container pelican-panel-1    Started
+```
+
+> ⏳ **Au premier démarrage**, Docker télécharge les images et initialise la base de données. Attendez **1 à 2 minutes** avant d'accéder à l'interface web.
+
+Vérifiez que tout tourne correctement :
 
 ```bash
 sudo docker compose ps
 ```
 
-Vous devriez voir `panel` et `mysql` avec le statut `running`.
+Les deux conteneurs doivent afficher le statut `running`.
 
 ---
 
-## Étape 5 — Récupération de la clé d'application ⚠️
+## Étape 5 — Sauvegarder la clé d'application ⚠️
 
-> **Cette étape est critique.** La clé d'application chiffre vos données sensibles. Sans elle, vous ne pourrez pas restaurer le panel en cas de problème.
+Cette étape est **indispensable**. La clé d'application chiffre les données sensibles. Sans elle, vous ne pourrez pas restaurer votre panel en cas de problème.
 
 ```bash
 sudo docker compose exec panel cat /pelican-data/.env | grep APP_KEY
 ```
 
 Vous obtiendrez une ligne de ce type :
+
 ```
-APP_KEY=base64:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
+APP_KEY=base64:xXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxX=
 ```
 
-**Conservez cette clé précieusement** dans un gestionnaire de mots de passe (Bitwarden, KeePass...) ou un fichier chiffré.
+> 🔒 **Copiez cette ligne** dans un endroit sûr : gestionnaire de mots de passe (Bitwarden, KeePass...), fichier chiffré, etc.
 
 ---
 
 ## Étape 6 — Finalisation via l'interface Web
 
-1. Ouvrez votre navigateur et accédez à l'assistant d'installation :
+1. Ouvrez votre navigateur et rendez-vous sur :
 
    ```
    http://<IP_DE_VOTRE_VM>/installer
    ```
 
-   > 💡 Utilisez un onglet en **navigation privée** pour éviter les conflits de cache.
+   > 💡 Utilisez un onglet en **navigation privée** pour éviter les conflits de cache HTTP/HTTPS.
 
-2. Suivez les étapes de l'assistant à l'écran.
+2. Suivez les étapes de l'assistant.
 
-3. À l'étape **configuration de la base de données**, renseignez :
+3. À l'étape **base de données**, renseignez :
 
-   | Champ | Valeur à saisir |
+   | Champ | Valeur |
    |---|---|
-   | Pilote | `MySQL` ou `MariaDB` |
-   | Hôte | L'IP de votre VM (ex: `192.168.0.10`) |
+   | Pilote | MySQL / MariaDB |
+   | Hôte | `<IP_DE_VOTRE_VM>` (ex: `192.168.0.10`) |
    | Nom de la base | `pelican` |
    | Port | `3306` |
    | Nom d'utilisateur | `pelican` |
-   | Mot de passe | La valeur de `DB_PASSWORD` dans votre `compose.yml` |
+   | Mot de passe | `motDePasseDB` |
 
 4. Cliquez sur **Suivant** pour terminer l'assistant et créer votre compte administrateur.
 
 ---
 
-## 🖥️ Gérer plusieurs services avec Portainer
+## 📦 Gérer plusieurs services Docker Compose
 
-Portainer vous permet de gérer toutes vos stacks Docker depuis une interface web claire. Voici comment l'utiliser au quotidien.
+### Principe fondamental
 
-### Déployer une nouvelle stack depuis Portainer
+Chaque service vit dans son propre dossier. Pour interagir avec un service, il faut **se placer dans son dossier** avant d'exécuter les commandes Docker Compose.
 
-1. Connectez-vous à Portainer : `http://<IP_DE_VOTRE_VM>:9000`
-2. Dans le menu de gauche, cliquez sur **Stacks**
-3. Cliquez sur **+ Add stack**
-4. Donnez un nom à votre stack (ex: `pelican`)
-5. Dans l'éditeur, collez le contenu de votre `compose.yml`
-6. Cliquez sur **Deploy the stack**
+```bash
+# Exemple : gérer Pelican
+cd /opt/pelican
+sudo docker compose up -d       # Démarrer
+sudo docker compose down        # Arrêter
+sudo docker compose logs -f     # Voir les logs
 
-### Vue d'ensemble des stacks
-
-Depuis **Stacks**, vous voyez en un coup d'œil tous vos services :
-
-```
-Stacks
-├── pelican        ✅ running  (2 conteneurs : panel, mysql)
-├── jellyfin       ✅ running  (1 conteneur)
-├── nextcloud      ⏹ stopped  (3 conteneurs)
-└── monitoring     ✅ running  (2 conteneurs)
+# Exemple : gérer Nextcloud (indépendamment de Pelican)
+cd /opt/nextcloud
+sudo docker compose up -d
+sudo docker compose down
 ```
 
-### Actions disponibles par stack
+> ✅ Stopper Pelican n'affecte pas Nextcloud, et inversement. Chaque stack est totalement indépendante.
 
-| Action | Comment faire dans Portainer |
-|---|---|
-| Voir les conteneurs | Cliquer sur le nom de la stack |
-| Démarrer / Arrêter | Boutons en haut à droite de la stack |
-| Consulter les logs | Conteneurs → icône 📋 à droite du conteneur |
-| Mettre à jour une image | Conteneurs → Recreate → cocher "Pull latest image" |
-| Modifier le compose.yml | Stacks → cliquer sur la stack → Editor |
-| Supprimer une stack | Stacks → cocher → Remove |
+---
 
-### Bonnes pratiques avec plusieurs services
+### Voir tous les conteneurs en cours d'exécution
 
-> 💡 **Une stack = un dossier** — Gardez toujours une copie de vos `compose.yml` sur votre machine locale, pas uniquement dans Portainer.
+Pour avoir une vue globale de **tous** vos conteneurs (toutes stacks confondues) :
 
-> 💡 **Les ports doivent être uniques** — Deux services ne peuvent pas utiliser le même port. Exemple : si Pelican utilise le port `80`, un autre service devra utiliser `8080`, `8081`, etc.
+```bash
+sudo docker ps
+```
 
-> 💡 **Nommez vos volumes explicitement** — Préfixez les noms de volumes avec le nom du service (ex: `pelican-db`, `jellyfin-config`) pour éviter les confusions.
+Exemple de sortie :
 
-> 💡 **Redémarrage automatique** — Toujours ajouter `restart: always` à vos services critiques pour qu'ils redémarrent automatiquement après un reboot du serveur.
+```
+CONTAINER ID   IMAGE                          STATUS          NAMES
+a1b2c3d4e5f6   ghcr.io/pelican-dev/panel      Up 2 hours      pelican-panel-1
+b2c3d4e5f6a7   mariadb:10.11                  Up 2 hours      pelican-mysql-1
+c3d4e5f6a7b8   nextcloud:latest               Up 5 hours      nextcloud-app-1
+```
+
+---
+
+### Éviter les conflits de ports entre services
+
+Chaque service qui expose un port doit utiliser un port **unique** sur la machine hôte. Vous ne pouvez pas avoir deux services qui écoutent sur le port 80 en même temps.
+
+**Exemple de répartition :**
+
+| Service | Port machine | Port conteneur | URL d'accès |
+|---|---|---|---|
+| Pelican Panel | `80` | `80` | `http://IP` |
+| Nextcloud | `8080` | `80` | `http://IP:8080` |
+| Vaultwarden | `8081` | `80` | `http://IP:8081` |
+| Portainer | `9000` | `9000` | `http://IP:9000` |
+
+> 💡 Si vous avez un **reverse proxy** (comme Nginx Proxy Manager ou Traefik), vous pouvez utiliser des sous-domaines à la place des ports. C'est la solution recommandée pour un setup propre à long terme.
+
+---
+
+### Éviter les conflits de réseaux internes
+
+Chaque stack doit avoir son propre **sous-réseau** pour éviter les conflits :
+
+```yaml
+# Stack Pelican
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Stack Nextcloud
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+# Stack Vaultwarden
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+```
+
+> Chaque stack communique en interne sur son propre réseau isolé. Les stacks ne se voient pas entre elles, ce qui est plus sécurisé.
+
+---
+
+### Mettre à jour un service
+
+Pour mettre à jour l'image d'un service vers la dernière version :
+
+```bash
+cd /opt/pelican
+
+# Télécharger la nouvelle version de l'image
+sudo docker compose pull
+
+# Recréer les conteneurs avec la nouvelle image
+sudo docker compose up -d
+
+# Supprimer les anciennes images devenues inutiles
+sudo docker image prune -f
+```
+
+> ✅ Vos données sont dans des **volumes** et ne sont pas affectées par la mise à jour.
+
+---
+
+### Supprimer complètement un service
+
+Si vous voulez supprimer un service et **garder les données** :
+
+```bash
+cd /opt/pelican
+sudo docker compose down
+```
+
+Si vous voulez supprimer un service et **effacer toutes les données** (attention, irréversible !) :
+
+```bash
+sudo docker compose down -v
+```
+
+> ⚠️ L'option `-v` supprime également tous les **volumes** associés (base de données, fichiers de config...).
 
 ---
 
 ## 🛠️ Commandes utiles
 
-Ces commandes sont à exécuter **depuis le dossier du service** (ex: `cd /opt/pelican`).
-
-### Gestion de la stack
+### Commandes Docker Compose (à exécuter depuis le dossier du service)
 
 | Action | Commande |
 |---|---|
-| Démarrer tous les conteneurs | `sudo docker compose up -d` |
-| Arrêter tous les conteneurs | `sudo docker compose down` |
-| Redémarrer tous les conteneurs | `sudo docker compose restart` |
+| Démarrer les conteneurs | `sudo docker compose up -d` |
+| Arrêter les conteneurs | `sudo docker compose down` |
+| Redémarrer les conteneurs | `sudo docker compose restart` |
 | Voir l'état des conteneurs | `sudo docker compose ps` |
-| Consulter les logs en temps réel | `sudo docker compose logs -f` |
-| Logs d'un seul service | `sudo docker compose logs -f panel` |
+| Voir les logs en temps réel | `sudo docker compose logs -f` |
+| Voir les logs d'un seul service | `sudo docker compose logs -f panel` |
+| Mettre à jour les images | `sudo docker compose pull && sudo docker compose up -d` |
+| Supprimer avec les données | `sudo docker compose down -v` |
 
-### Mises à jour
+### Commandes Docker globales (tous les services)
+
+| Action | Commande |
+|---|---|
+| Voir tous les conteneurs actifs | `sudo docker ps` |
+| Voir tous les conteneurs (y compris arrêtés) | `sudo docker ps -a` |
+| Voir les images téléchargées | `sudo docker images` |
+| Voir l'espace disque utilisé | `sudo docker system df` |
+| Nettoyer les images inutilisées | `sudo docker image prune -f` |
+| Nettoyage complet (attention !) | `sudo docker system prune -f` |
+
+### Commandes spécifiques à Pelican
+
+| Action | Commande |
+|---|---|
+| Vider le cache de l'application | `sudo docker compose exec panel php artisan config:clear` |
+| Accéder au shell du conteneur panel | `sudo docker compose exec panel bash` |
+| Récupérer la clé d'application | `sudo docker compose exec panel cat /pelican-data/.env \| grep APP_KEY` |
+
+---
+
+## 🔧 Résolution des problèmes courants
+
+### Le panel ne démarre pas
 
 ```bash
-# Télécharger les nouvelles versions des images
-sudo docker compose pull
+# Regardez les logs pour identifier l'erreur
+sudo docker compose logs panel
+```
 
-# Recréer les conteneurs avec les nouvelles images
+### Erreur "port is already allocated"
+
+Un autre service utilise déjà ce port sur votre machine.
+
+```bash
+# Identifier quel processus utilise le port 80
+sudo ss -tlnp | grep :80
+```
+
+Changez le port dans votre `compose.yml` (ex: `"8080:80"`) puis relancez.
+
+### Erreur de connexion à la base de données
+
+Vérifiez que :
+1. L'IP dans `DB_HOST` correspond bien à l'IP de votre VM
+2. Le mot de passe dans `DB_PASSWORD` correspond à `MYSQL_PASSWORD`
+3. Le conteneur MySQL est bien démarré : `sudo docker compose ps`
+
+### Réinitialiser complètement et repartir de zéro
+
+```bash
+cd /opt/pelican
+
+# Arrêter et supprimer les conteneurs ET les volumes (toutes les données seront perdues)
+sudo docker compose down -v
+
+# Relancer proprement
 sudo docker compose up -d
-
-# Supprimer les anciennes images inutilisées (libère de l'espace)
-sudo docker image prune -f
-```
-
-### Maintenance de Pelican
-
-```bash
-# Vider le cache de l'application
-sudo docker compose exec panel php artisan config:clear
-
-# Exécuter les migrations de base de données (après une mise à jour)
-sudo docker compose exec panel php artisan migrate --force
-```
-
-### Gestion globale de Docker
-
-```bash
-# Voir tous les conteneurs actifs sur le serveur
-sudo docker ps
-
-# Voir tous les conteneurs (y compris arrêtés)
-sudo docker ps -a
-
-# Voir l'espace utilisé par Docker
-sudo docker system df
-
-# Nettoyage général (conteneurs arrêtés, images inutiles, réseaux orphelins)
-sudo docker system prune -f
 ```
 
 ---
 
-## 🔧 Dépannage
-
-### Les conteneurs ne démarrent pas
-
-```bash
-# Consultez les logs pour identifier l'erreur
-sudo docker compose logs
-```
-
-### Impossible d'accéder à l'interface web
-
-- Vérifiez que le conteneur `panel` est bien en état `running` : `sudo docker compose ps`
-- Vérifiez que l'IP dans `APP_URL` et `DB_HOST` correspond bien à votre machine
-- Vérifiez qu'aucun pare-feu ne bloque le port 80 : `sudo ufw status`
-
-### Erreur de connexion à la base de données
-
-- Attendez 30 secondes supplémentaires après le lancement (MariaDB peut être lent à initialiser)
-- Vérifiez que les mots de passe dans `compose.yml` sont identiques entre `panel` et `mysql`
-- Vérifiez que `DB_HOST` contient bien l'IP de votre VM et non `localhost`
-
-### Portainer ne répond plus
-
-```bash
-sudo docker restart portainer
-```
-
-### Un port est déjà utilisé
-
-```bash
-# Trouver quel processus utilise un port (ex: port 80)
-sudo ss -tlnp | grep :80
-```
+*Guide rédigé pour Pelican Panel — [Documentation officielle](https://pelican.dev)*
