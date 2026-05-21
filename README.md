@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="(https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1000&width=435&lines=%F0%9F%93%9A+Docs+%26+Tutoriels;Self-hosting+%7C+Docker+%7C+Linux;Des+guides+clairs+pour+tous)](https://git.io/typing-svg)" alt="Banner SVG" />
+<a href="https://git.io/typing-svg"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1000&width=435&lines=%F0%9F%93%9A+Docs+%26+Tutoriels;Self-hosting+%7C+Docker+%7C+Linux;Des+guides+clairs+pour+tous" alt="Banner SVG" /></a>
 
 <br/>
 
