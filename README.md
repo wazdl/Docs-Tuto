@@ -1,6 +1,6 @@
 <div align="center">
 
-<a href="https://git.io/typing-svg"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1000&width=435&lines=%F0%9F%93%9A+Docs+%26+Tutoriels;Self-hosting+%7C+Docker+%7C+Linux;Des+guides+clairs+pour+tous" alt="Banner SVG" /></a>
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1000&width=435&lines=%F0%9F%93%9A+Docs+%26+Tutoriels;Self-hosting+%7C+Docker+%7C+Linux;Des+guides+clairs+pour+tous" alt="Banner SVG" /></a>
 
 ![GitHub repo size](https://img.shields.io/github/repo-size/wazdl/Docs-Tuto?style=for-the-badge&color=6E96F7)
 ![GitHub last commit](https://img.shields.io/github/last-commit/wazdl/Docs-Tuto?style=for-the-badge&color=6E96F7)
