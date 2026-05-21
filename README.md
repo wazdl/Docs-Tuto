@@ -26,7 +26,7 @@
 
 | Tutoriel | Description | Niveau | Lien |
 |---|---|---|---|
-| 🦤 **Pelican Panel** | Installer et gérer un panel de serveurs de jeux avec Docker | 🟢 Débutant | [Voir le guide](./pelican-panel/README.md) |
+| 🦤 **Pelican Panel** | Installer et gérer un panel de serveurs de jeux avec Docker | 🟢 Débutant | [Voir le guide](./pelican-panel/Pelican.md) |
 
 <br/>
 
