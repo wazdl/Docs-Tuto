@@ -296,7 +296,7 @@ sudo docker compose exec panel cat /pelican-data/.env | grep APP_KEY
 Vous obtiendrez une ligne de ce type :
 
 ```
-APP_KEY=base64:xXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxX=
+APP_KEY=xXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxX=
 ```
 
 > 🔒 **Copiez cette ligne** dans un endroit sûr : gestionnaire de mots de passe (Bitwarden, KeePass...), fichier chiffré, etc.
