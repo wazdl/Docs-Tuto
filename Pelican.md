@@ -1,6 +1,6 @@
 # 🦤 Pelican Panel — Guide d'installation complet sur Debian (Docker)
 
-> Guide d'installation pas à pas pour déployer **Pelican Panel** avec Docker et MariaDB sur une machine Debian.  
+> Guide d'installation pas à pas pour déployer **Pelican Panel + Wings** avec Docker et MariaDB sur une machine Debian.  
 > Conçu pour les débutants — chaque commande est expliquée.
 
 ---
@@ -11,13 +11,14 @@
 2. [Prérequis](#-prérequis)
 3. [Étape 1 — Installation de Docker](#étape-1--installation-de-docker)
 4. [Étape 2 — Organiser ses services Docker](#étape-2--organiser-ses-services-docker)
-5. [Étape 3 — Configurer Pelican Panel](#étape-3--configurer-pelican-panel)
+5. [Étape 3 — Configurer Pelican Panel + Wings](#étape-3--configurer-pelican-panel--wings)
 6. [Étape 4 — Lancer l'environnement](#étape-4--lancer-lenvironnement)
 7. [Étape 5 — Sauvegarder la clé d'application](#étape-5--sauvegarder-la-clé-dapplication-)
 8. [Étape 6 — Finalisation via l'interface Web](#étape-6--finalisation-via-linterface-web)
-9. [Gérer plusieurs services Docker Compose](#-gérer-plusieurs-services-docker-compose)
-10. [Commandes utiles](#️-commandes-utiles)
-11. [Résolution des problèmes courants](#-résolution-des-problèmes-courants)
+9. [Étape 7 — Configurer Wings depuis le Panel](#étape-7--configurer-wings-depuis-le-panel)
+10. [Gérer plusieurs services Docker Compose](#-gérer-plusieurs-services-docker-compose)
+11. [Commandes utiles](#️-commandes-utiles)
+12. [Résolution des problèmes courants](#-résolution-des-problèmes-courants)
 
 ---
 
@@ -36,6 +37,15 @@ Avant de commencer, voici quelques notions clés :
 | **Port** | Une "porte d'entrée" réseau. `80:80` signifie : le port 80 de la machine → port 80 du conteneur |
 
 > 💡 **En résumé :** Docker Compose lit votre fichier `compose.yml`, télécharge les images nécessaires, et lance tous vos conteneurs automatiquement.
+
+### Pelican Panel vs Wings — quelle différence ?
+
+| Composant | Rôle |
+|---|---|
+| **Panel** | L'interface web d'administration — vous gérez vos serveurs de jeu depuis ici |
+| **Wings** | Le daemon qui tourne sur le nœud et exécute réellement les serveurs de jeu dans des conteneurs Docker |
+
+> 💡 En résumé : le Panel donne les ordres, Wings les exécute. Les deux doivent pouvoir communiquer entre eux.
 
 ---
 
@@ -114,13 +124,11 @@ Quand on gère plusieurs services (Pelican, Nextcloud, Vaultwarden, etc.), il es
 
 ```
 /opt/
-├── pelican/          ← Dossier du service Pelican
+├── pelican/          ← Dossier du service Pelican (Panel + Wings)
 │   └── compose.yml
 ├── nextcloud/        ← Exemple d'un autre service
 │   └── compose.yml
-├── vaultwarden/      ← Exemple d'un autre service
-│   └── compose.yml
-└── monitoring/       ← Exemple : outils de supervision
+└── vaultwarden/      ← Exemple d'un autre service
     └── compose.yml
 ```
 
@@ -138,7 +146,7 @@ cd /opt/pelican
 
 ---
 
-## Étape 3 — Configurer Pelican Panel
+## Étape 3 — Configurer Pelican Panel + Wings
 
 Créez le fichier de configuration Docker Compose :
 
@@ -148,7 +156,7 @@ nano compose.yml
 
 > `nano` est un éditeur de texte simple dans le terminal. Si vous préférez, vous pouvez utiliser `vim` ou tout autre éditeur.
 
-Copiez-collez le contenu suivant, puis **remplacez `X.X.X.X` par l'IP réelle de votre VM** (à deux endroits) :
+Copiez-collez le contenu suivant, puis **remplacez `X.X.X.X` par l'IP réelle de votre VM** (à tous les endroits indiqués) :
 
 ```yaml
 services:
@@ -193,10 +201,36 @@ services:
     volumes:
       - pelican-db:/var/lib/mysql   # Les données de la BDD survivent aux redémarrages
 
+  wings:
+    container_name: wings
+    image: ghcr.io/pelican-dev/wings:latest
+    restart: always
+    networks:
+      - default
+    ports:
+      - "8080:8080"   # Port de communication Panel ↔ Wings
+      - "2022:2022"   # Port SFTP pour les fichiers des serveurs de jeu
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "X.X.X.X:host-gateway"   # ← Remplacer par l'IP de votre VM (communication interne)
+    tty: true
+    environment:
+      TZ: "Europe/Paris"     # Fuseau horaire
+      WINGS_UID: 988         # UID utilisateur sous lequel Wings s'exécute
+      WINGS_GID: 988         # GID groupe sous lequel Wings s'exécute
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # Accès au daemon Docker de l'hôte
+      - /var/lib/pelican:/var/lib/pelican           # Fichiers des serveurs de jeu
+      - /etc/pelican:/etc/pelican                   # Config Wings (config.yml généré par le panel)
+    # ⚠️ Wings attend sagement que /etc/pelican/config.yml soit créé par le panel
+    # avant de démarrer correctement — c'est normal au premier lancement
+
 volumes:
   pelican-data:    # Données persistantes du panel
   pelican-logs:    # Logs persistants
   pelican-db:      # Base de données persistante
+  # Note : les données Wings sont stockées directement sur l'hôte
+  # (/var/lib/pelican et /etc/pelican) plutôt que dans des volumes Docker nommés
 
 networks:
   default:
@@ -207,15 +241,14 @@ networks:
 
 > 💾 Sauvegardez et quittez : `Ctrl+O` → `Entrée` → `Ctrl+X`
 
-### Comprendre le fichier compose.yml
+### Comprendre les paramètres spécifiques à Wings
 
-- **`image`** : l'image Docker à utiliser (téléchargée automatiquement depuis internet)
-- **`restart: always`** : le conteneur redémarre automatiquement si la machine reboot ou si il plante
-- **`ports`** : relie un port de votre machine à un port dans le conteneur (`machine:conteneur`)
-- **`volumes`** : stockage persistant — vos données ne sont pas perdues si le conteneur est recréé
-- **`environment`** : variables de configuration passées à l'application
-- **`depends_on`** : définit l'ordre de démarrage des conteneurs
-- **`networks`** : réseau interne isolé — les conteneurs de cette stack communiquent entre eux mais pas avec les autres stacks
+- **`/var/run/docker.sock`** : Wings a besoin d'accéder au daemon Docker de la machine hôte pour lancer les conteneurs des serveurs de jeu. C'est ce montage qui lui donne ce pouvoir.
+- **`/var/lib/pelican`** : c'est ici que sont stockés les fichiers de tous vos serveurs de jeu (maps, configs, sauvegardes...).
+- **`/etc/pelican`** : Wings y lira son fichier `config.yml`, qui sera généré automatiquement depuis l'interface web du panel à l'étape 7.
+- **`extra_hosts` avec votre IP** : permet à Wings de résoudre l'adresse du panel sur le réseau interne Docker — indispensable pour qu'ils communiquent.
+- **`port 8080`** : le panel utilise ce port pour envoyer ses ordres à Wings (créer/démarrer/arrêter des serveurs).
+- **`port 2022`** : port SFTP permettant de transférer des fichiers vers vos serveurs de jeu.
 
 ---
 
@@ -235,9 +268,12 @@ Docker va télécharger les images puis démarrer les conteneurs. Vous verrez qu
 ```
 ✔ Container pelican-mysql-1    Started
 ✔ Container pelican-panel-1    Started
+✔ Container wings              Started
 ```
 
 > ⏳ **Au premier démarrage**, Docker télécharge les images et initialise la base de données. Attendez **1 à 2 minutes** avant d'accéder à l'interface web.
+>
+> ⚠️ **Wings affichera des erreurs au premier démarrage** — c'est tout à fait normal ! Il attend que le fichier `config.yml` soit généré par le panel (étape 7). Il ne crashe pas, il patiente.
 
 Vérifiez que tout tourne correctement :
 
@@ -245,7 +281,7 @@ Vérifiez que tout tourne correctement :
 sudo docker compose ps
 ```
 
-Les deux conteneurs doivent afficher le statut `running`.
+Les trois conteneurs doivent afficher le statut `running`.
 
 ---
 
@@ -284,13 +320,71 @@ APP_KEY=base64:xXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxX=
    | Champ | Valeur |
    |---|---|
    | Pilote | MySQL / MariaDB |
-   | Hôte | `<IP_DE_VOTRE_VM>` (ex: `192.168.0.10`) |
+   | Hôte | `<IP_DE_VOTRE_VM>` (ex: `192.168.50.132`) |
    | Nom de la base | `pelican` |
    | Port | `3306` |
    | Nom d'utilisateur | `pelican` |
    | Mot de passe | `motDePasseDB` |
 
 4. Cliquez sur **Suivant** pour terminer l'assistant et créer votre compte administrateur.
+
+---
+
+## Étape 7 — Configurer Wings depuis le Panel
+
+Une fois connecté à l'interface d'administration, il faut créer un **nœud** (node) et générer la configuration de Wings.
+
+### 7.1 — Créer un nœud
+
+1. Dans le menu d'administration, allez dans **Nodes** → **Create New**.
+2. Remplissez les informations :
+
+   | Champ | Valeur |
+   |---|---|
+   | Name | Un nom pour votre nœud (ex: `node-local`) |
+   | FQDN | L'IP de votre VM (ex: `192.168.50.132`) |
+   | Communicate Over SSL | Non (HTTP pour un setup local) |
+   | Daemon Port | `8080` |
+   | Daemon SFTP Port | `2022` |
+
+3. Sauvegardez le nœud.
+
+### 7.2 — Générer et déployer la configuration Wings
+
+1. Sur la page du nœud que vous venez de créer, cliquez sur l'onglet **Configuration**.
+2. Vous verrez un bloc YAML — c'est la configuration que Wings attend. Copiez-le.
+3. Sur votre machine, créez le fichier de configuration :
+
+   ```bash
+   sudo mkdir -p /etc/pelican
+   sudo nano /etc/pelican/config.yml
+   ```
+
+4. Collez le contenu YAML copié depuis le panel, sauvegardez (`Ctrl+O` → `Entrée` → `Ctrl+X`).
+
+### 7.3 — Redémarrer Wings
+
+Maintenant que le fichier de config existe, redémarrez Wings pour qu'il le prenne en compte :
+
+```bash
+cd /opt/pelican
+sudo docker compose restart wings
+```
+
+Vérifiez les logs pour confirmer que Wings démarre correctement :
+
+```bash
+sudo docker compose logs -f wings
+```
+
+Vous devriez voir quelque chose comme :
+```
+[INFO] wings is running and ready to accept connections
+```
+
+### 7.4 — Vérifier la connexion Panel ↔ Wings
+
+De retour dans l'interface web, sur la page du nœud, l'indicateur de statut doit passer au **vert**. Si c'est le cas, le panel et Wings communiquent correctement.
 
 ---
 
@@ -331,22 +425,23 @@ Exemple de sortie :
 CONTAINER ID   IMAGE                          STATUS          NAMES
 a1b2c3d4e5f6   ghcr.io/pelican-dev/panel      Up 2 hours      pelican-panel-1
 b2c3d4e5f6a7   mariadb:10.11                  Up 2 hours      pelican-mysql-1
-c3d4e5f6a7b8   nextcloud:latest               Up 5 hours      nextcloud-app-1
+c3d4e5f6a7b8   ghcr.io/pelican-dev/wings      Up 2 hours      wings
 ```
 
 ---
 
 ### Éviter les conflits de ports entre services
 
-Chaque service qui expose un port doit utiliser un port **unique** sur la machine hôte. Vous ne pouvez pas avoir deux services qui écoutent sur le port 80 en même temps.
+Chaque service qui expose un port doit utiliser un port **unique** sur la machine hôte. Vous ne pouvez pas avoir deux services qui écoutent sur le même port en même temps.
 
 **Exemple de répartition :**
 
 | Service | Port machine | Port conteneur | URL d'accès |
 |---|---|---|---|
 | Pelican Panel | `80` | `80` | `http://IP` |
-| Nextcloud | `8080` | `80` | `http://IP:8080` |
-| Vaultwarden | `8081` | `80` | `http://IP:8081` |
+| Wings (API) | `8080` | `8080` | Utilisé en interne par le panel |
+| Wings (SFTP) | `2022` | `2022` | Accès SFTP aux fichiers |
+| Nextcloud | `8081` | `80` | `http://IP:8081` |
 | Portainer | `9000` | `9000` | `http://IP:9000` |
 
 > 💡 Si vous avez un **reverse proxy** (comme Nginx Proxy Manager ou Traefik), vous pouvez utiliser des sous-domaines à la place des ports. C'est la solution recommandée pour un setup propre à long terme.
@@ -420,7 +515,8 @@ Si vous voulez supprimer un service et **effacer toutes les données** (attentio
 sudo docker compose down -v
 ```
 
-> ⚠️ L'option `-v` supprime également tous les **volumes** associés (base de données, fichiers de config...).
+> ⚠️ L'option `-v` supprime les volumes Docker nommés (base de données, config panel...).  
+> Les données Wings stockées dans `/var/lib/pelican` et `/etc/pelican` **ne sont pas supprimées** par cette commande — elles sont sur l'hôte. Supprimez-les manuellement si nécessaire : `sudo rm -rf /var/lib/pelican /etc/pelican`
 
 ---
 
@@ -433,9 +529,11 @@ sudo docker compose down -v
 | Démarrer les conteneurs | `sudo docker compose up -d` |
 | Arrêter les conteneurs | `sudo docker compose down` |
 | Redémarrer les conteneurs | `sudo docker compose restart` |
+| Redémarrer seulement Wings | `sudo docker compose restart wings` |
 | Voir l'état des conteneurs | `sudo docker compose ps` |
 | Voir les logs en temps réel | `sudo docker compose logs -f` |
-| Voir les logs d'un seul service | `sudo docker compose logs -f panel` |
+| Voir les logs de Wings | `sudo docker compose logs -f wings` |
+| Voir les logs du panel | `sudo docker compose logs -f panel` |
 | Mettre à jour les images | `sudo docker compose pull && sudo docker compose up -d` |
 | Supprimer avec les données | `sudo docker compose down -v` |
 
@@ -456,11 +554,30 @@ sudo docker compose down -v
 |---|---|
 | Vider le cache de l'application | `sudo docker compose exec panel php artisan config:clear` |
 | Accéder au shell du conteneur panel | `sudo docker compose exec panel bash` |
+| Accéder au shell du conteneur Wings | `sudo docker compose exec wings bash` |
 | Récupérer la clé d'application | `sudo docker compose exec panel cat /pelican-data/.env \| grep APP_KEY` |
+| Vérifier la config Wings | `cat /etc/pelican/config.yml` |
 
 ---
 
 ## 🔧 Résolution des problèmes courants
+
+### Wings ne démarre pas / affiche des erreurs au premier lancement
+
+C'est normal. Wings a besoin que `/etc/pelican/config.yml` existe avant de démarrer correctement. Suivez l'étape 7 pour générer ce fichier depuis le panel, puis redémarrez Wings :
+
+```bash
+sudo docker compose restart wings
+sudo docker compose logs -f wings
+```
+
+### Le panel ne voit pas Wings (statut rouge dans l'interface)
+
+Vérifiez les points suivants :
+1. Le port `8080` est bien exposé et Wings tourne : `sudo docker compose ps`
+2. L'IP dans `extra_hosts` de Wings correspond à l'IP réelle de votre VM
+3. Le champ **FQDN** du nœud dans le panel pointe vers la bonne IP
+4. Consultez les logs Wings : `sudo docker compose logs wings`
 
 ### Le panel ne démarre pas
 
@@ -476,9 +593,11 @@ Un autre service utilise déjà ce port sur votre machine.
 ```bash
 # Identifier quel processus utilise le port 80
 sudo ss -tlnp | grep :80
+# Identifier quel processus utilise le port 8080
+sudo ss -tlnp | grep :8080
 ```
 
-Changez le port dans votre `compose.yml` (ex: `"8080:80"`) puis relancez.
+Changez le port dans votre `compose.yml` puis relancez.
 
 ### Erreur de connexion à la base de données
 
@@ -492,8 +611,11 @@ Vérifiez que :
 ```bash
 cd /opt/pelican
 
-# Arrêter et supprimer les conteneurs ET les volumes (toutes les données seront perdues)
+# Arrêter et supprimer les conteneurs ET les volumes Docker (données panel/BDD perdues)
 sudo docker compose down -v
+
+# Supprimer aussi les données Wings sur l'hôte (optionnel)
+sudo rm -rf /var/lib/pelican /etc/pelican
 
 # Relancer proprement
 sudo docker compose up -d
