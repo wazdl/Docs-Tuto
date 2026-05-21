@@ -13,7 +13,7 @@
 4. [Étape 2 — Organiser ses services Docker](#étape-2--organiser-ses-services-docker)
 5. [Étape 3 — Configurer Pelican Panel + Wings](#étape-3--configurer-pelican-panel--wings)
 6. [Étape 4 — Lancer l'environnement](#étape-4--lancer-lenvironnement)
-7. [Étape 5 — Sauvegarder la clé d'application](#étape-5--sauvegarder-la-clé-dapplication-⚠️)
+7. [Étape 5 — Sauvegarder la clé d'application ⚠️](#étape-5--sauvegarder-la-clé-dapplication-)
 8. [Étape 6 — Finalisation via l'interface Web](#étape-6--finalisation-via-linterface-web)
 9. [Étape 7 — Configurer Wings depuis le Panel](#étape-7--configurer-wings-depuis-le-panel)
 10. [Gérer plusieurs services Docker Compose](#-gérer-plusieurs-services-docker-compose)
