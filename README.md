@@ -41,14 +41,11 @@
 │
 ├── 📄 README.md              ← Vous êtes ici — page d'accueil
 │
-├── 📁 pelican-panel/
-│   └── 📄 README.md          ← Guide complet Pelican Panel
+├── Pelican.md                ← Guide complet Pelican Panel
 │
 └── 📁 prochain-tuto/         ← À venir...
     └── 📄 README.md
 ```
-
-> Chaque tutoriel est dans son propre dossier avec son `README.md` dédié.
 
 ---
 
