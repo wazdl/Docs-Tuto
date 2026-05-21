@@ -53,7 +53,7 @@
 
 Vous débarquez sur ce repo et vous ne savez pas par où commencer ?
 
-- 🆕 **Débutant complet** → Commencez par [Pelican Panel](./pelican-panel/README.md), le guide le plus complet et commenté pas à pas.
+- 🆕 **Débutant complet** → Commencez par [Pelican Panel](./Pelican.md), le guide le plus complet et commenté pas à pas.
 - 🐳 **Vous cherchez quelque chose sur Docker** → Consultez la section [Docker & Self-Hosting](#-docker--self-hosting) ci-dessus.
 
 ---
