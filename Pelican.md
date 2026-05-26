@@ -222,6 +222,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock   # Accès au daemon Docker de l'hôte
       - /var/lib/pelican:/var/lib/pelican           # Fichiers des serveurs de jeu
       - /etc/pelican:/etc/pelican                   # Config Wings (config.yml généré par le panel)
+      - /tmp/pelican:/tmp/pelican
     # ⚠️ Wings attend sagement que /etc/pelican/config.yml soit créé par le panel
     # avant de démarrer correctement — c'est normal au premier lancement
 
