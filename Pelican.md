@@ -201,6 +201,20 @@ services:
     volumes:
       - pelican-db:/var/lib/mysql   # Les données de la BDD survivent aux redémarrages
 
+  phpmyadmin:
+    image: phpmyadmin:latest
+    restart: always
+    networks:
+      - default
+    ports:
+      - "8081:80" # On utilise le port 8081 car le 80 et 8080 sont déjà pris
+    environment:
+      PMA_HOST: mysql # Il va se connecter directement au conteneur 'mysql'
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 300M # Pratique si tu dois importer de grosses bases de données
+    depends_on:
+      - mysql
+
   wings:
     container_name: wings
     image: ghcr.io/pelican-dev/wings:latest
