@@ -25,7 +25,7 @@ sudo apt install git nano curl -y
 Installation de Docker et Docker Compose (script officiel) :
 
 ```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
+sudo curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 ```
 
