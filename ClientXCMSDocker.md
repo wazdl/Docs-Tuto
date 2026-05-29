@@ -9,7 +9,6 @@
 
 | Mesure | Détail |
 |---|---|
-| **Isolation réseau** | MariaDB est confinée au réseau Docker interne. Le port `3306` n'est **pas** exposé sur Internet. |
 | **Mots de passe dynamiques** | L'application et la base de données se synchronisent automatiquement via le fichier `.env`. |
 
 ---
