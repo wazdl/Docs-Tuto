@@ -48,7 +48,7 @@ sudo apt install git nano curl -y
 Installez ensuite Docker et Docker Compose via le script officiel :
 
 ```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
+sudo curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 ```
 
@@ -62,14 +62,14 @@ sudo sh get-docker.sh
 Créez le dossier de travail, clonez le dépôt et préparez les fichiers de configuration :
 
 ```bash
-mkdir -p /var/www
+sudo mkdir -p /var/www
 cd /var/www
-git clone https://github.com/ClientXCMS/clientxcms.git
+sudo git clone https://github.com/ClientXCMS/clientxcms.git
 cd clientxcms
 
 # Création des fichiers à partir des exemples
-cp docker-compose.example.yml docker-compose.yml
-cp .env.example .env
+sudo cp docker-compose.example.yml docker-compose.yml
+sudo cp .env.example .env
 ```
 
 ---
