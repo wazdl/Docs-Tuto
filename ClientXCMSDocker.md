@@ -111,7 +111,11 @@ DB_PASSWORD=clientxcms
    ```
 
 2. Patientez environ **30 secondes** le temps que la base de données s'initialise correctement, puis exécutez ces commandes de configuration initiale :
-
+   * **Voir la clé de sécurité :**
+     ```bash
+     sudo docker exec -it clientxcms-app-1 php artisan key:generate --show
+     ```
+     
    * **Générer la clé de sécurité de l'application :**
      ```bash
      sudo docker compose exec app php artisan key:generate
