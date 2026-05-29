@@ -1,27 +1,29 @@
-# 🚀 Guide d'Installation : ClientXCMS via Docker
+# 🚀 ClientXCMS — Installation Professionnelle via Docker
 
-> Installation fluide et fonctionnelle de ClientXCMS sur un serveur vierge (Ubuntu/Debian).  
-> Inclut les correctifs essentiels pour les environnements de développement (IP locale) afin d'éviter l'erreur **419 Page Expired**.
-
----
-
-## 📋 Prérequis
-
-- Un serveur Linux (Ubuntu/Debian recommandé) fraîchement installé
-- Accès `root` ou `sudo`
+> Guide d'installation sécurisé, pas-à-pas, sur un serveur vierge (Ubuntu).
+> Inclut le correctif **erreur 419 Page Expired** et l'isolation de la base de données.
 
 ---
 
-## Étape 1 — Préparation du Serveur
+## 🔒 Sécurité appliquée
 
-Mettez à jour le système et installez les outils de base :
+| Mesure | Détail |
+|---|---|
+| **Isolation réseau** | MariaDB est confinée au réseau Docker interne. Le port `3306` n'est **pas** exposé sur Internet. |
+| **Mots de passe dynamiques** | L'application et la base de données se synchronisent automatiquement via le fichier `.env`. |
+
+---
+
+## Étape 1 — Préparation du serveur
+
+Mise à jour du système et installation des dépendances :
 
 ```bash
 sudo apt update && sudo apt upgrade -y
 sudo apt install git nano curl -y
 ```
 
-Installez Docker et Docker Compose via le script officiel :
+Installation de Docker et Docker Compose (script officiel) :
 
 ```bash
 curl -fsSL https://get.docker.com -o get-docker.sh
@@ -30,170 +32,240 @@ sudo sh get-docker.sh
 
 ---
 
-## Étape 2 — Téléchargement des Fichiers
-
-Créez le répertoire de travail et clonez le dépôt officiel :
+## Étape 2 — Téléchargement du projet
 
 ```bash
-sudo mkdir -p /var/www
+mkdir -p /var/www
 cd /var/www
-sudo git clone https://github.com/ClientXCMS/clientxcms.git
+git clone https://github.com/ClientXCMS/clientxcms.git
 cd clientxcms
 ```
 
-Copiez les fichiers de configuration d'exemple :
+---
+
+## Étape 3 — Configuration de `docker-compose.yml`
 
 ```bash
-sudo cp docker-compose.example.yml docker-compose.yml
-sudo cp .env.example .env
+nano docker-compose.yml
 ```
+
+Remplacez l'intégralité du contenu par la configuration suivante :
+
+```yaml
+x-common-variables: &common-variables
+  APP_URL: "${APP_URL:-http://localhost}"
+
+services:
+  app:
+    image: clientxcms/panel:master
+    restart: always
+    volumes:
+      - .github/logs/nginx/:/var/log/nginx/
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+        APP_URL: "${APP_URL:-http://localhost}"
+        APP_ENV: "${APP_ENV:-production}"
+        APP_DEBUG: "${APP_DEBUG:-false}"
+        APP_TIMEZONE: "${APP_TIMEZONE:-Europe/Paris}"
+        LETSENCRYPT_EMAIL: "${LETSENCRYPT_EMAIL:-}"
+        APP_ENVIRONMENT_ONLY: "${APP_ENVIRONMENT_ONLY:-false}"
+        CACHE_DRIVER: "${CACHE_DRIVER:-file}"
+        SESSION_DRIVER: "${SESSION_DRIVER:-cookie}"
+        QUEUE_DRIVER: "${QUEUE_DRIVER:-database}"
+        REDIS_HOST: "${REDIS_HOST:-127.0.0.1}"
+        DB_HOST: "database"
+        DB_PORT: "${DB_PORT:-3306}"
+        DB_NAME: "${DB_NAME:-clientxcms}"
+        DB_PASSWORD: "${DB_PASSWORD:-clientxcms}"
+        MAIL_FROM: "${MAIL_FROM:-noreply@example.com}"
+        MAIL_DRIVER: "${MAIL_DRIVER:-smtp}"
+        MAIL_HOST: "${MAIL_HOST:-smtp.exemple.com}"
+        MAIL_PORT: "${MAIL_PORT:-587}"
+        MAIL_USERNAME: "${MAIL_USERNAME:-}"
+        MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
+        MAIL_ENCRYPTION: "${MAIL_ENCRYPTION:-true}"
+        DEFAULT_LOCALE: "${DEFAULT_LOCALE:-fr_FR}"
+        OAUTH_CLIENT_ID: "${OAUTH_CLIENT_ID:-XXXX}"
+        OAUTH_CLIENT_SECRET: "${OAUTH_CLIENT_SECRET:-XXXX}"
+    networks:
+        - clientxcms-network
+
+  database:
+    image: mariadb:10.5
+    restart: always
+    # Ports commentés pour bloquer les accès extérieurs
+    # ports:
+    #   - 3306:3306
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    environment:
+      MYSQL_USER: "clientxcms"
+      MYSQL_DATABASE: "${DB_NAME:-clientxcms}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:-clientxcms}"
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD:-clientxcms}"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-clientxcms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - clientxcms-network
+
+networks:
+  clientxcms-network:
+    driver: bridge
+
+volumes:
+  mariadb-data:
+```
+
+> Sauvegardez et quittez : `Ctrl+X` → `Y` → `Entrée`
 
 ---
 
-## Étape 3 — Configuration du fichier `.env` ⚠️
-
-> C'est ici que se jouent la majorité des erreurs d'installation. Lisez attentivement.
+## Étape 4 — Configuration du fichier `.env`
 
 ```bash
-sudo nano .env
+cp .env.example .env
+nano .env
 ```
 
-### 1. URL de l'application (`APP_URL`)
-
-| Environnement | Valeur |
-|---|---|
-| Domaine avec HTTPS | `APP_URL=https://votre-domaine.com` |
-| IP locale (HTTP) | `APP_URL=http://VOTRE_ADRESSE_IP` |
-
-### 2. Correctif Anti-Erreur 419
-
-Ajoutez ou modifiez ces lignes pour que les sessions fonctionnent correctement, surtout sans HTTPS actif :
+Renseignez les variables suivantes :
 
 ```env
-SESSION_DRIVER=file
+APP_URL=http://192.168.50.139  # ← Votre IP ou domaine
+
+# Correctif anti-erreur 419 (obligatoire en HTTP/IP locale)
+SESSION_DRIVER=cookie
 SESSION_SECURE_COOKIE=false
 SESSION_SECURE=false
+
+# Base de données
+DB_CONNECTION=mysql
+DB_HOST=database
+DB_PORT=3306
+DB_DATABASE=clientxcms
+DB_NAME=clientxcms
+DB_USERNAME=root
+DB_PASSWORD=MettezUnMotDePasseFortIci123
 ```
 
-### 3. Base de données
-
-Définissez un mot de passe robuste :
-
-```env
-DB_PASSWORD=votre_mot_de_passe_robuste
-```
-
-> 💾 **Sauvegarder avec Nano :** `Ctrl+X` → `Y` → `Entrée`
+> ⚠️ Remplacez `DB_PASSWORD` par un mot de passe fort de votre choix.
 
 ---
 
-## Étape 4 — Déploiement et Génération de la Clé
+## Étape 5 — Lancement et initialisation
 
-Lancez l'environnement Docker :
+> Si vous réinstallez sur un serveur existant, purgez d'abord les anciens volumes :
+> ```bash
+> sudo docker compose down -v
+> ```
+
+**1. Déployez les conteneurs :**
 
 ```bash
-sudo docker compose --env-file .env up -d --build
+sudo docker compose --env-file .env up -d
 ```
 
-> ⏳ Patientez environ une minute pour laisser la base de données s'initialiser.
+**2. Attendez ~30 secondes** que la base de données s'initialise.
 
-Générez la clé de sécurité obligatoire (chiffrement des sessions) :
+**3. Générez la clé de chiffrement :**
 
 ```bash
 sudo docker exec -it clientxcms-app-1 php artisan key:generate
 ```
 
-> **Note :** Si la clé ne s'ajoute pas automatiquement dans le `.env`, exécutez :
-> ```bash
-> sudo docker exec -it clientxcms-app-1 php artisan key:generate --show
-> ```
-> Copiez la valeur `base64:...` et collez-la manuellement à la ligne `APP_KEY=` de votre `.env`.
-
-Videz le cache pour appliquer la clé :
+**4. Videz le cache :**
 
 ```bash
 sudo docker exec -it clientxcms-app-1 php artisan optimize:clear
 ```
 
----
-
-## Étape 5 — Compte Administrateur et Licence
-
-Créez votre compte administrateur :
+**5. Créez le compte administrateur :**
 
 ```bash
 sudo docker exec -it clientxcms-app-1 php artisan clientxcms:install-admin
 ```
 
-Suivez les instructions à l'écran (email, mot de passe, etc.).
-
-**Accès au site :** Ouvrez votre navigateur (de préférence en navigation privée pour le premier test) et rendez-vous sur l'adresse configurée dans `APP_URL`.
-
-**Activation :** L'écran de validation de licence s'affiche. Cliquez sur le bouton d'activation pour relier votre site à votre compte ClientXCMS.
-
-> Si vous utilisez une IP locale, assurez-vous de l'autoriser dans votre espace client sur le site officiel.
-
 ---
 
-## Étape 6 — Automatisation des Mises à Jour du `.env`
+## Étape 6 — Script de mise à jour du `.env`
 
-Docker et Laravel mettent les configurations en cache — une simple modification du `.env` ne sera **pas** prise en compte sans redémarrage. Ce script automatise la procédure.
+Docker met la configuration en cache au démarrage. Ce script recharge proprement toute modification du `.env`.
 
-### Création du script
+**1. Créez le script :**
 
 ```bash
 nano maj_env.sh
 ```
 
-Collez le contenu suivant :
+**2. Collez le contenu suivant :**
 
 ```bash
 #!/bin/bash
 echo "🔄 Application des modifications du fichier .env..."
 sudo docker compose down
 sudo docker compose --env-file .env up -d --force-recreate
-echo "🧹 Nettoyage du cache de l'application..."
+echo "🧹 Nettoyage des caches Laravel..."
 sudo docker exec -it clientxcms-app-1 php artisan optimize:clear
-echo "✅ Mise à jour terminée avec succès !"
+echo "✅ Configuration mise à jour avec succès !"
 ```
 
-Rendez le script exécutable :
+**3. Rendez-le exécutable :**
 
 ```bash
 chmod +x maj_env.sh
 ```
 
-### Utilisation
-
-À chaque modification du `.env` (clé API Stripe, changement de domaine, etc.), placez-vous dans `/var/www/clientxcms` et exécutez :
+**Utilisation :** après chaque modification du `.env`, exécutez simplement :
 
 ```bash
 ./maj_env.sh
 ```
 
-Le système redémarre et applique automatiquement vos nouveaux paramètres.
+---
+
+## 🛠️ Résolution des problèmes
+
+### ❌ Erreur 1045 — `Access denied` / Conteneur en boucle `Restarting`
+
+**Cause :** le mot de passe dans `.env` a été modifié alors que la base de données avait déjà été initialisée avec un autre mot de passe.
+
+**Solution :**
+
+```bash
+# 1. Éteignez tout et purgez le stockage corrompu
+sudo docker compose down -v
+
+# 2. Relancez proprement
+./maj_env.sh
+```
+
+> ⏳ Attendez **45 secondes** avant de recréer le compte admin.
 
 ---
 
-## 🗂️ Récapitulatif des commandes utiles
+### ❌ Erreur 419 — `Page Expired` à la soumission d'un formulaire
 
-| Action | Commande |
-|---|---|
-| Démarrer les conteneurs | `sudo docker compose --env-file .env up -d` |
-| Arrêter les conteneurs | `sudo docker compose down` |
-| Voir les logs | `sudo docker compose logs -f` |
-| Vider le cache | `sudo docker exec -it clientxcms-app-1 php artisan optimize:clear` |
-| Appliquer un nouveau `.env` | `./maj_env.sh` |
+**Cause :** le mode HTTPS strict est actif alors que vous naviguez sur une IP locale en HTTP — le navigateur bloque les cookies de session.
 
----
+**Solution :** vérifiez que ces deux lignes sont bien présentes dans votre `.env` :
 
-## 🐛 Problèmes fréquents
+```env
+SESSION_SECURE=false
+SESSION_DRIVER=cookie
+```
 
-**Erreur 419 Page Expired**  
-→ Vérifiez que `SESSION_SECURE_COOKIE=false` et `SESSION_SECURE=false` sont bien définis dans le `.env`, puis relancez `./maj_env.sh`.
+Puis rechargez la configuration :
 
-**`APP_KEY` manquante**  
-→ Lancez `php artisan key:generate --show` et copiez manuellement la valeur dans le `.env`.
+```bash
+./maj_env.sh
+```
 
-**La base de données ne démarre pas**  
-→ Attendez 60 secondes après le `docker compose up` avant de lancer les commandes `artisan`.
+> 💡 Effectuez votre test dans un **onglet de navigation privée** pour éviter les conflits de cache navigateur.
