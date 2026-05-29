@@ -43,7 +43,7 @@ cd clientxcms
 
 ---
 
-## Étape 43 — Configuration du fichier `.env`
+## Étape 3 — Configuration du fichier `.env`
 
 ```bash
 cp .env.example .env
