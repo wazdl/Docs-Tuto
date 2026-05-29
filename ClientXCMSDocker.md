@@ -35,7 +35,7 @@ Avant de commencer, vous devez lier votre future installation à votre compte Cl
 
 2. Installez Docker et Docker Compose (version officielle) :
    ```bash
-   sudo curl -fsSL https://get.docker.com -o get-docker.sh
+   curl -fsSL https://get.docker.com -o get-docker.sh
    sudo sh get-docker.sh
    ```
 
@@ -47,16 +47,16 @@ Créez votre dossier de travail et préparez les fichiers de configuration néce
 
 ```bash
 # Création du répertoire web standard
-sudo mkdir -p /var/www
+mkdir -p /var/www
 cd /var/www
 
 # Clonage du dépôt officiel de ClientXCMS
-sudo git clone https://github.com/ClientXCMS/clientxcms.git
+git clone https://github.com/ClientXCMS/clientxcms.git
 cd clientxcms
 
 # Création des fichiers de configuration à partir des exemples fournis
-sudo cp docker-compose.example.yml docker-compose.yml
-sudo cp .env.example .env
+cp docker-compose.example.yml docker-compose.yml
+cp .env.example .env
 ```
 
 ---
@@ -66,7 +66,7 @@ sudo cp .env.example .env
 Éditez le fichier de configuration principal avec l'éditeur de texte `nano` :
 
 ```bash
-sudo nano .env
+nano .env
 ```
 
 Remplissez les informations dans le fichier en respectant strictement le format suivant :
@@ -82,6 +82,8 @@ APP_URL=https://votre-domaine.com
 OAUTH_CLIENT_ID=votre_client_id_ici
 OAUTH_CLIENT_SECRET=votre_secret_id_ici
 
+# Mettez "production" si vous avez un nom de domaine, ou "local" si vous utilisez une IP
+APP_ENV=production
 ```
 
 ### 2. Configuration de la Base de Données (⚠️ Ne pas modifier)
@@ -151,7 +153,26 @@ Pour corriger ce comportement spécifique aux environnements de test locaux :
    SESSION_DRIVER=cookie
    ```
 
-2. Lancez cette commande pour forcer l'application à accepter les connexions HTTP non-sécurisées *(à réexécuter uniquement si vous recréez ou réinitialisez le conteneur)* :
+2. **Ajouter les variables manquantes dans le fichier `docker-compose.yml` :**
+   Ouvrez votre fichier `docker-compose.yml` avec `nano docker-compose.yml`. Descendez dans la section `services:`, sous `app:`, puis trouvez la section `environment:`.
+   Ajoutez ces deux lignes pour relayer l'information de votre `.env` directement au conteneur.
+
+   Vous pouvez les placer juste sous `SESSION_DRIVER` pour que ce soit propre :
+   ```yaml
+       environment:
+           APP_URL: "${APP_URL:-http://localhost}"
+           # ... (les autres variables)
+           SESSION_DRIVER: "${SESSION_DRIVER:-file}"
+           
+           # 👇 AJOUTEZ CES DEUX LIGNES ICI 👇
+           SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-false}"
+           SESSION_SECURE: "${SESSION_SECURE:-false}"
+           
+           QUEUE_DRIVER: "${QUEUE_DRIVER:-database}"
+           # ... (la suite)
+   ```
+
+3. Lancez cette commande pour forcer l'application à accepter les connexions HTTP non-sécurisées *(à réexécuter uniquement si vous recréez ou réinitialisez le conteneur)* :
    ```bash
    sudo docker compose exec -i app sh -c "cat > .env" < .env && sudo docker compose exec app php artisan optimize:clear
    ```
