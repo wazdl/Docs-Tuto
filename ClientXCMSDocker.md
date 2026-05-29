@@ -35,7 +35,7 @@ Avant de commencer, vous devez lier votre future installation à votre compte Cl
 
 2. Installez Docker et Docker Compose (version officielle) :
    ```bash
-   curl -fsSL https://get.docker.com -o get-docker.sh
+   sudo curl -fsSL https://get.docker.com -o get-docker.sh
    sudo sh get-docker.sh
    ```
 
