@@ -44,8 +44,8 @@ cd clientxcms
 Copiez les fichiers de configuration d'exemple :
 
 ```bash
-cp docker-compose.example.yml docker-compose.yml
-cp .env.example .env
+sudo cp docker-compose.example.yml docker-compose.yml
+sudo cp .env.example .env
 ```
 
 ---
