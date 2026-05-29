@@ -70,7 +70,7 @@ sudo nano .env
 Ajoutez ou modifiez ces lignes pour que les sessions fonctionnent correctement, surtout sans HTTPS actif :
 
 ```env
-SESSION_DRIVER=cookie
+SESSION_DRIVER=file
 SESSION_SECURE_COOKIE=false
 SESSION_SECURE=false
 ```
