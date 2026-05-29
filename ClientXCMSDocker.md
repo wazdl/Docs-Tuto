@@ -175,8 +175,3 @@ Pour corriger ce comportement spécifique aux environnements de test locaux :
            QUEUE_DRIVER: "${QUEUE_DRIVER:-database}"
            # ... (la suite)
    ```
-
-3. Lancez cette commande pour forcer l'application à accepter les connexions HTTP non-sécurisées *(à réexécuter uniquement si vous recréez ou réinitialisez le conteneur)* :
-   ```bash
-   sudo docker compose exec -i app sh -c "cat > .env" < .env && sudo docker compose exec app php artisan optimize:clear
-   ```
