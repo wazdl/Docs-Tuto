@@ -29,7 +29,7 @@
 ## 00. Prérequis
 
 Avant de commencer, vérifiez que votre environnement remplit ces conditions :
-* Un serveur Linux propre (Ubuntu 22.04 ou Debian 11+ recommandé).
+* Un serveur Linux propre (Debian 12+ recommandé).
 * Un accès `sudo` ou `root` sur la machine.
 * Les ports `80` et `443` libres et accessibles.
 * Une connexion Internet active pour télécharger les images Docker.
