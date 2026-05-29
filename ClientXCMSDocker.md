@@ -35,9 +35,9 @@ sudo sh get-docker.sh
 Créez le répertoire de travail et clonez le dépôt officiel :
 
 ```bash
-mkdir -p /var/www
+sudo mkdir -p /var/www
 cd /var/www
-git clone https://github.com/ClientXCMS/clientxcms.git
+sudo git clone https://github.com/ClientXCMS/clientxcms.git
 cd clientxcms
 ```
 
