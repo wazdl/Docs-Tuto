@@ -82,8 +82,6 @@ APP_URL=https://votre-domaine.com
 OAUTH_CLIENT_ID=votre_client_id_ici
 OAUTH_CLIENT_SECRET=votre_secret_id_ici
 
-# Mettez "production" si vous avez un nom de domaine, ou "local" si vous utilisez une IP
-APP_ENV=production
 ```
 
 ### 2. Configuration de la Base de Données (⚠️ Ne pas modifier)
