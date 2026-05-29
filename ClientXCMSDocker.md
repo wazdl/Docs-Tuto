@@ -35,7 +35,7 @@ Avant de commencer, vous devez lier votre future installation à votre compte Cl
 
 2. Installez Docker et Docker Compose (version officielle) :
    ```bash
-   curl -fsSL https://get.docker.com -o get-docker.sh
+   sudo curl -fsSL https://get.docker.com -o get-docker.sh
    sudo sh get-docker.sh
    ```
 
@@ -47,16 +47,16 @@ Créez votre dossier de travail et préparez les fichiers de configuration néce
 
 ```bash
 # Création du répertoire web standard
-mkdir -p /var/www
+sudo mkdir -p /var/www
 cd /var/www
 
 # Clonage du dépôt officiel de ClientXCMS
-git clone https://github.com/ClientXCMS/clientxcms.git
+sudo git clone https://github.com/ClientXCMS/clientxcms.git
 cd clientxcms
 
 # Création des fichiers de configuration à partir des exemples fournis
-cp docker-compose.example.yml docker-compose.yml
-cp .env.example .env
+sudo cp docker-compose.example.yml docker-compose.yml
+sudo cp .env.example .env
 ```
 
 ---
@@ -66,7 +66,7 @@ cp .env.example .env
 Éditez le fichier de configuration principal avec l'éditeur de texte `nano` :
 
 ```bash
-nano .env
+sudo nano .env
 ```
 
 Remplissez les informations dans le fichier en respectant strictement le format suivant :
