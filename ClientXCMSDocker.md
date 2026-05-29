@@ -6,7 +6,7 @@
 ---
 
 ## 🏷️ Informations & Technologies
-* **Système cible :** Ubuntu 22.04 / Debian 11+
+* **Système cible :** Debian 12+
 * **Stack :** Docker Compose, MariaDB, Laravel
 * **Protocoles :** HTTP & HTTPS
 
