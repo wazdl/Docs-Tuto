@@ -46,7 +46,7 @@ cd clientxcms
 
 ```bash
 sudo cp .env.example .env
-nano .env
+sudo nano .env
 ```
 
 Renseignez les variables suivantes :
