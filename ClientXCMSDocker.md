@@ -55,7 +55,7 @@ sudo cp .env.example .env
 > C'est ici que se jouent la majorité des erreurs d'installation. Lisez attentivement.
 
 ```bash
-nano .env
+sudo nano .env
 ```
 
 ### 1. URL de l'application (`APP_URL`)
