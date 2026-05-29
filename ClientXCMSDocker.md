@@ -52,7 +52,7 @@ sudo nano .env
 Renseignez les variables suivantes :
 
 ```env
-APP_URL=http://192.168.50.139  # ← Votre IP ou domaine
+APP_URL=http://X.X.X.X  # ← Votre IP ou domaine
 
 # Correctif anti-erreur 419 (obligatoire en HTTP/IP locale)
 SESSION_DRIVER=cookie
