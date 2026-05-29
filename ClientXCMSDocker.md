@@ -66,7 +66,7 @@ sudo cp .env.example .env
 Éditez le fichier de configuration principal avec l'éditeur de texte `nano` :
 
 ```bash
-nano .env
+sudo nano .env
 ```
 
 Remplissez les informations dans le fichier en respectant strictement le format suivant :
