@@ -45,7 +45,7 @@ cd clientxcms
 ## Étape 3 — Configuration du fichier `.env`
 
 ```bash
-cp .env.example .env
+sudo cp .env.example .env
 nano .env
 ```
 
