@@ -61,22 +61,27 @@ sudo cp .env.example .env
 
 ---
 
-## ⚙️ Étape 4 : Configuration du fichier `.env`
+## ⚙️ Étape 4 : Configuration
 
-Éditez le fichier de configuration principal avec l'éditeur de texte `nano` :
+> [!WARNING]
+> **Point critique — `APP_URL` doit être définie à un seul endroit.**
+> L'`APP_URL` ne doit être configurée **que dans le fichier `.env`**. Si elle est également présente dans le `docker-compose.yml` avec une valeur par défaut (ex: `${APP_URL:-http://localhost}`), Docker fera une **concaténation des deux valeurs**, ce qui provoquera des erreurs de licence et d'authentification OAuth. La ligne dans le `docker-compose.yml` doit être `APP_URL: "${APP_URL}"` sans valeur par défaut.
+
+### Fichier `.env`
+
+Éditez le fichier de configuration principal :
 
 ```bash
 sudo nano .env
 ```
 
-Remplissez les informations dans le fichier en respectant strictement le format suivant :
+Remplissez les informations en respectant le format suivant :
 
-### 1. Paramètres de l'application & OAuth
-Remplacez les valeurs d'exemple par vos informations réelles :
+#### 1. Paramètres de l'application & OAuth
 
 ```ini
 # Renseignez votre URL complète : https://votre-domaine.com (Production) OU http://VOTRE_IP_LOCALE (Local)
-APP_URL=https://votre-domaine.com
+APP_URL=http://192.168.1.100
 
 # Renseignez les clés obtenues à l'Étape 1
 OAUTH_CLIENT_ID=votre_client_id_ici
@@ -86,8 +91,7 @@ OAUTH_CLIENT_SECRET=votre_secret_id_ici
 APP_ENV=production
 ```
 
-### 2. Configuration de la Base de Données (⚠️ Ne pas modifier)
-Pour fonctionner correctement avec le réseau interne du fichier `docker-compose.yml`, ces valeurs doivent rester intactes :
+#### 2. Configuration de la Base de Données (⚠️ Ne pas modifier)
 
 ```ini
 DB_CONNECTION=mysql
@@ -101,22 +105,51 @@ DB_PASSWORD=clientxcms
 > [!TIP]
 > Pour sauvegarder et quitter sur `nano` : faites `Ctrl + X`, puis confirmez avec `Y` (ou `O` en français), et enfin appuyez sur `Entrée`.
 
+### Fichier `docker-compose.yml`
+
+Deux points importants à vérifier :
+
+**1. `APP_URL` sans valeur par défaut :**
+```yaml
+environment:
+    APP_URL: "${APP_URL}"   # ← Pas de valeur par défaut après le :-
+    APP_ENV: "${APP_ENV:-production}"
+    # ... reste de la configuration
+```
+
+**2. Entrypoint pour les permissions des modules et chemin correct du volume :**
+```yaml
+services:
+  app:
+    image: clientxcms/panel:master
+    restart: always
+    entrypoint: ["/bin/sh", "-c", "chmod -R 777 /app/modules && chown -R www-data:www-data /app/modules && exec /bin/ash .github/docker/entrypoint.sh supervisord -n -c /etc/supervisord.conf"]
+    volumes:
+      - .github/logs/nginx/:/var/log/nginx/
+      - ./modules:/app/modules        # ← /app/modules et NON /var/www/html/modules
+      - ./storage:/var/www/html/storage
+```
+
+> [!NOTE]
+> L'entrypoint règle automatiquement les permissions du dossier `modules` à chaque démarrage du conteneur, sans intervention manuelle.
+
 ---
 
 ## 🚀 Étape 5 : Lancement et Déploiement
 
-1. Démarrez les conteneurs Docker en arrière-plan. Docker va lire le fichier `.env` et configurer l'environnement :
+1. Démarrez les conteneurs Docker en arrière-plan :
    ```bash
    sudo docker compose up -d
    ```
 
-2. Patientez environ **30 secondes** le temps que la base de données s'initialise correctement, puis exécutez ces commandes de configuration initiale :
-   * **Voir la clé de sécurité :**
+2. Patientez environ **30 secondes** le temps que la base de données s'initialise, puis exécutez ces commandes :
+
+   * **Afficher la clé de sécurité** *(copiez-la pour la mettre dans votre `.env` à la variable `APP_KEY`)* :
      ```bash
      sudo docker exec -it clientxcms-app-1 php artisan key:generate --show
      ```
-     
-   * **Générer la clé de sécurité de l'application :**
+
+   * **Générer et enregistrer automatiquement la clé de sécurité :**
      ```bash
      sudo docker compose exec app php artisan key:generate
      ```
@@ -130,79 +163,121 @@ DB_PASSWORD=clientxcms
      ```bash
      sudo docker compose exec app php artisan clientxcms:install-admin
      ```
-     *(Suivez attentivement les instructions affichées sur votre terminal pour créer vos identifiants d'accès au panel d'administration).*
+     *(Suivez les instructions affichées pour créer vos identifiants d'accès).*
 
 ---
 
 ## 🌐 Étape 6 : Connexion au Panel
 
-1. Ouvrez votre navigateur internet.
-2. Rendez-vous sur l'adresse configurée dans votre `APP_URL` suivie de `/admin/login` (Exemple : `https://votre-domaine.com/admin/login`).
-3. Connectez-vous avec les identifiants configurés à l'étape précédente. Grâce aux clés OAuth renseignées dans le fichier `.env`, votre licence sera validée automatiquement avec le serveur de licence officiel !
+1. Ouvrez votre navigateur et rendez-vous sur l'adresse configurée dans `APP_URL` suivie de `/admin/login`.
+   Exemple : `http://192.168.1.100/admin/login`
+2. Connectez-vous avec les identifiants créés à l'étape précédente.
 
-🎉 **Félicitations !** Votre installation est maintenant terminée, sécurisée et survivra aux redémarrages de votre serveur !
+🎉 **Félicitations !** Votre installation est terminée et survivra aux redémarrages !
 
 ---
 
-## 🛠️ Guide de Dépannage pour les développeurs (IP Locale)
+## 🧩 Installation d'une Extension / Module personnalisé
 
-> [!WARNING]
-> Si vous installez ClientXCMS sans nom de domaine (via une adresse IP directe en `http://`), votre navigateur bloquera la transmission sécurisée des cookies de session. Cela provoquera une **Erreur 419 (Page Expired)** à la connexion.
+> [!NOTE]
+> Les fichiers de l'application sont situés dans **/app** à l'intérieur du conteneur (et non `/var/www/html`). Le volume du `docker-compose.yml` doit donc pointer vers `/app/modules` (déjà configuré à l'Étape 4).
 
-Pour corriger ce comportement spécifique aux environnements de test locaux :
+### 1. Placer votre module
 
-1. Assurez-vous d'avoir bien configuré ces lignes dans votre fichier `.env` :
-   ```ini
-   APP_ENV=local
-   SESSION_DRIVER=cookie
-   ```
+Copiez votre dossier de module dans `./modules/` sur la machine hôte. Vérifiez qu'il est bien visible dans le conteneur :
 
-2. **Ajouter les variables manquantes dans le fichier `docker-compose.yml` :**
-   Ouvrez votre fichier `docker-compose.yml` avec `nano docker-compose.yml`. Descendez dans la section `services:`, sous `app:`, puis trouvez la section `environment:`.
-   Ajoutez ces deux lignes pour relayer l'information de votre `.env` directement au conteneur.
+```bash
+sudo docker compose exec app ls /app/modules/
+```
 
-   Vous pouvez les placer juste sous `SESSION_DRIVER` pour que ce soit propre :
+### 2. Enregistrer le module en base de données
+
+ClientXCMS stocke la liste des modules actifs en base. Un module présent dans le dossier mais absent de la table `modules` ne sera pas chargé. Enregistrez-le manuellement :
+
+```bash
+sudo docker compose exec app php artisan tinker --execute="
+DB::table('modules')->insert([
+    'name'       => 'NomDuModule',
+    'uuid'       => 'uuid-du-module',
+    'version'    => '1.0',
+    'enabled'    => 1,
+    'provider'   => 'App\\\\Modules\\\\NomDuModule\\\\NomDuModuleServiceProvider',
+    'created_at' => now(),
+    'updated_at' => now(),
+]);
+echo 'Module enregistré avec succès';
+"
+```
+
+> Remplacez `NomDuModule` et `uuid-du-module` par les valeurs de votre module (consultez son fichier `module.json`).
+
+Pour vérifier la structure exacte de la table si besoin :
+```bash
+sudo docker compose exec app php artisan tinker --execute="var_dump(DB::getSchemaBuilder()->getColumnListing('modules'));"
+```
+
+### 3. Régénérer l'autoload et vider les caches
+
+```bash
+sudo docker compose exec app composer dump-autoload
+sudo docker compose exec app php artisan optimize:clear
+```
+
+Votre module devrait maintenant apparaître dans l'interface d'administration.
+
+---
+
+## 🛠️ Guide de Dépannage
+
+### Erreur 419 (Page Expired) en environnement local
+
+Si vous installez ClientXCMS sans nom de domaine (via une adresse IP en `http://`), votre navigateur peut bloquer les cookies de session.
+
+1. Dans `docker-compose.yml`, ajoutez sous `SESSION_DRIVER` :
    ```yaml
-       environment:
-           APP_URL: "${APP_URL:-http://localhost}"
-           # ... (les autres variables)
-           SESSION_DRIVER: "${SESSION_DRIVER:-file}"
-           
-           # 👇 AJOUTEZ CES DEUX LIGNES ICI 👇
-           SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-false}"
-           SESSION_SECURE: "${SESSION_SECURE:-false}"
-           
-           QUEUE_DRIVER: "${QUEUE_DRIVER:-database}"
-           # ... (la suite)
+   SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-false}"
+   SESSION_SECURE: "${SESSION_SECURE:-false}"
    ```
 
-3. **Forcer l'acceptation du HTTP :**
-   Lancez cette commande pour forcer l'application à accepter les connexions HTTP non-sécurisées *(à réexécuter uniquement si vous recréez ou réinitialisez le conteneur)* :
+2. Forcez l'injection du `.env` dans le conteneur (si vous faites des modifications) :
    ```bash
-   sudo docker compose exec -i app sh -c "cat > .env" < .env && sudo docker compose exec app php artisan optimize:clear
+   sudo docker compose exec -T app sh -c "cat > .env" < .env && sudo docker compose exec app php artisan optimize:clear
    ```
+
+### Erreur "Token has been revoked"
+
+Cette erreur indique que vos clés OAuth sont invalides ou absentes. Vérifiez dans votre `.env` :
+```ini
+OAUTH_CLIENT_ID=votre_vrai_client_id
+OAUTH_CLIENT_SECRET=votre_vrai_secret
+```
+Puis rechargez la configuration :
+```bash
+sudo docker compose exec app php artisan config:clear
+sudo docker compose exec app php artisan cache:clear
+```
 
 ---
 
 ## 💡 Commandes Utiles
 
-Voici les commandes d'administration les plus courantes pour maintenir et configurer votre instance :
-
-### 1. Redémarrer les conteneurs (pour appliquer un changement de `.env`)
-Si vous modifiez votre fichier `.env`, vous devez redémarrer le projet pour que Docker charge les nouvelles variables d'environnement :
+### Redémarrer les conteneurs (après un changement de `.env`)
 ```bash
 sudo docker compose down
 sudo docker compose up -d
 ```
 
-### 2. Vider et optimiser le cache de l'application
-Indispensable après une modification de configuration ou en cas de bug d'affichage :
+### Vider et optimiser le cache
 ```bash
 sudo docker compose exec app php artisan optimize:clear
 ```
 
-### 3. Injecter directement le fichier `.env` local dans le conteneur
-Si vous devez synchroniser de force votre configuration locale avec le conteneur actif :
+### Injecter le fichier `.env` local dans le conteneur
 ```bash
 sudo docker compose exec -T app sh -c "cat > .env" < .env
+```
+
+### Vérifier les modules enregistrés en base
+```bash
+sudo docker compose exec app php artisan tinker --execute="var_dump(DB::table('modules')->get()->toArray());"
 ```
