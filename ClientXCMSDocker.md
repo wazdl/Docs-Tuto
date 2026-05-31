@@ -175,3 +175,34 @@ Pour corriger ce comportement spécifique aux environnements de test locaux :
            QUEUE_DRIVER: "${QUEUE_DRIVER:-database}"
            # ... (la suite)
    ```
+
+3. **Forcer l'acceptation du HTTP :**
+   Lancez cette commande pour forcer l'application à accepter les connexions HTTP non-sécurisées *(à réexécuter uniquement si vous recréez ou réinitialisez le conteneur)* :
+   ```bash
+   sudo docker compose exec -i app sh -c "cat > .env" < .env && sudo docker compose exec app php artisan optimize:clear
+   ```
+
+---
+
+## 💡 Commandes Utiles
+
+Voici les commandes d'administration les plus courantes pour maintenir et configurer votre instance :
+
+### 1. Redémarrer les conteneurs (pour appliquer un changement de `.env`)
+Si vous modifiez votre fichier `.env`, vous devez redémarrer le projet pour que Docker charge les nouvelles variables d'environnement :
+```bash
+sudo docker compose down
+sudo docker compose up -d
+```
+
+### 2. Vider et optimiser le cache de l'application
+Indispensable après une modification de configuration ou en cas de bug d'affichage :
+```bash
+sudo docker compose exec app php artisan optimize:clear
+```
+
+### 3. Injecter directement le fichier `.env` local dans le conteneur
+Si vous devez synchroniser de force votre configuration locale avec le conteneur actif :
+```bash
+sudo docker compose exec -T app sh -c "cat > .env" < .env
+```
