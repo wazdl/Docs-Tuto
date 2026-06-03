@@ -243,7 +243,7 @@ Si vous installez ClientXCMS sans nom de domaine (via une adresse IP en `http://
 
 2. Forcez l'injection du `.env` dans le conteneur (si vous faites des modifications) :
    ```bash
-   sudo docker compose exec -T app sh -c "cat > .env" < .env && sudo docker compose exec app php artisan optimize:clear
+   sudo docker compose cp .env app:/var/www/html/.env && sudo docker compose exec app php artisan optimize:clear
    ```
 
 ### Erreur "Token has been revoked"
@@ -276,7 +276,7 @@ sudo docker compose exec app php artisan optimize:clear
 
 ### Injecter le fichier `.env` local dans le conteneur
 ```bash
-sudo docker compose exec -T app sh -c "cat > .env" < .env
+sudo docker compose cp .env app:/var/www/html/.env
 ```
 
 ### Vérifier les modules enregistrés en base
