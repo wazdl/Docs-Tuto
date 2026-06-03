@@ -109,6 +109,8 @@ DB_PASSWORD=clientxcms
 
 Deux points importants à vérifier :
 
+Enlever `APP_URL: "http://localhost"` pour éviter la concaténation et le disfonctionnement des modules.
+
 **1. `APP_URL` sans valeur par défaut :**
 ```yaml
 environment:
