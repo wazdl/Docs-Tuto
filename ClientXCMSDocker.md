@@ -129,7 +129,14 @@ services:
     volumes:
       - .github/logs/nginx/:/var/log/nginx/
       - ./modules:/app/modules        # ← /app/modules et NON /var/www/html/modules
-      - ./storage:/var/www/html/storage
+      - ./storage:/app/storage
+      - bootstrap-cache:/app/bootstrap/cache # Persistance pour garder les modules activés / désactivés
+```
+```
+A la fin du fichier :
+    volumes:
+      mariadb-data:
+      bootstrap-cache:
 ```
 
 > [!NOTE]
