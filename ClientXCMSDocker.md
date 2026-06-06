@@ -114,6 +114,7 @@ Enlever `APP_URL: "http://localhost"` pour éviter la concaténation et le disfo
 **1. `APP_URL` sans valeur par défaut :**
 ```yaml
 environment:
+    APP_KEY: "${APP_KEY}"
     APP_URL: "${APP_URL}"   # ← Pas de valeur par défaut après le :-
     APP_ENV: "${APP_ENV:-production}"
     # ... reste de la configuration
