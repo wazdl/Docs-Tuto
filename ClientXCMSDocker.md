@@ -126,11 +126,12 @@ services:
   app:
     image: clientxcms/panel:master
     restart: always
-    entrypoint: ["/bin/sh", "-c", "chmod -R 777 /app/modules && chown -R www-data:www-data /app/modules && exec /bin/ash .github/docker/entrypoint.sh supervisord -n -c /etc/supervisord.conf"]
+    entrypoint: ["/bin/sh", "-c", "chmod -R 777 /app/modules /app/storage /app/resources/themes && chown -R www-data:www-data /app/modules /app/storage /app/resources/themes && exec /bin/ash .github/docker/entrypoint.sh supervisord -n -c /etc/supervisord.conf"]
     volumes:
       - .github/logs/nginx/:/var/log/nginx/
       - ./modules:/app/modules        # ← /app/modules et NON /var/www/html/modules
       - ./storage:/app/storage
+      - ./resources/themes:/app/resources/themes
       - bootstrap-cache:/app/bootstrap/cache # Persistance pour garder les modules activés / désactivés
 ```
 ```
